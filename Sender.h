@@ -38,7 +38,9 @@ public:
 
 				LOG_ALL(signalslog) << "to callback " << typeName(*(*callback)) << std::endl;
 
-				if ((*callback)->tryToConnect(*(*slot)))
+				// if connection could be established and callback is
+				// non-transparent (see Callback), we are done
+				if ((*callback)->tryToConnect(*(*slot)) && !(*callback)->isTransparent())
 					break;
 			}
 		}

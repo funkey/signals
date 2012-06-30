@@ -11,6 +11,24 @@
 
 namespace signals {
 
+/**
+ * Type to indicate how to invoke a callback.
+ */
+enum CallbackInvocation {
+
+	/**
+	 * Of all compatible default callbacks, only the most specific will be
+	 * called.
+	 */
+	Default,
+
+	/**
+	 * Transparent callbacks will always be called, regardless of the existance
+	 * of other, possibly more specific, callbacks.
+	 */
+	Transparent
+};
+
 class CallbackBase {
 
 public:
@@ -41,6 +59,24 @@ public:
 	 */
 	virtual bool tryToConnect(SlotBase& slot) = 0;
 
+	/**
+	 * Make this callback transparent. Transparent callbacks will always be
+	 * called, regardless of the existance of other, possibly more specific,
+	 * callbacks. Thus, they are transparent to these other callbacks.
+	 */
+	void setTransparent(bool transparent = true) {
+
+		_isTransparent = transparent;
+	}
+
+	/**
+	 * Returns true, if this is a transparent callback.
+	 */
+	bool isTransparent() const {
+
+		return _isTransparent;
+	}
+
 protected:
 
 	/**
@@ -54,12 +90,27 @@ protected:
 	 * used to find compatible pairs of slots and callbacks.
 	 */
 	virtual const Signal& createSignal() const = 0;
+
+private:
+
+	// indicates that this is a transparent callback
+	bool _isTransparent;
 };
 
 struct CallbackComparator {
 
 	bool operator()(const CallbackBase* a, const CallbackBase* b) const {
 
+		// sort all transparent callbacks to the beginning...
+		if (a->isTransparent() != b->isTransparent()) {
+
+			if (a->isTransparent())
+				return true;
+
+			return false;
+		}
+
+		// ...then consider the specificity of the signals
 		return *a < *b;
 	}
 };
@@ -124,7 +175,12 @@ public:
 
 	typedef boost::function<void(SignalType&)> callback_type;
 
-	Callback(callback_type callback) : _callback(callback) {}
+	Callback(callback_type callback, CallbackInvocation invocation) :
+		_callback(callback) {
+
+		if (invocation == Transparent)
+			setTransparent();
+	}
 
 	bool accepts(const Signal& signal) const {
 
