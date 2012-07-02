@@ -32,16 +32,26 @@ public:
 
 			LOG_ALL(signalslog) << "offering slot " << typeName(*(*slot)) << std::endl;
 
-			// find the first (most specific) callback
+			bool exclusiveFound = false;
+
+			// find all transparent and the first (most specific) exclusive callback
 			for (Receiver::callbacks_type::iterator callback = receiver.getCallbacks().begin();
 			     callback != receiver.getCallbacks().end(); ++callback) {
 
 				LOG_ALL(signalslog) << "to callback " << typeName(*(*callback)) << std::endl;
 
-				// if connection could be established and callback is
-				// non-transparent (see Callback), we are done
-				if ((*callback)->tryToConnect(*(*slot)) && !(*callback)->isTransparent())
-					break;
+				// if this is an exclusive callback and we found another
+				// exclusive one already, continue
+				if (!(*callback)->isTransparent() && exclusiveFound)
+					continue;
+
+				// if connection could be established
+				if ((*callback)->tryToConnect(*(*slot))) {
+
+					// we assigned the exclusive callback
+					if (!(*callback)->isTransparent())
+						exclusiveFound = true;
+				}
 			}
 		}
 	}

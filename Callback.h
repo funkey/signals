@@ -17,10 +17,10 @@ namespace signals {
 enum CallbackInvocation {
 
 	/**
-	 * Of all compatible default callbacks, only the most specific will be
+	 * Of all compatible exclusive callbacks, only the most specific will be
 	 * called.
 	 */
-	Default,
+	Exclusive,
 
 	/**
 	 * Transparent callbacks will always be called, regardless of the existance
@@ -101,13 +101,13 @@ struct CallbackComparator {
 
 	bool operator()(const CallbackBase* a, const CallbackBase* b) const {
 
-		// sort all transparent callbacks to the beginning...
+		// sort all transparent callbacks to the end...
 		if (a->isTransparent() != b->isTransparent()) {
 
 			if (a->isTransparent())
-				return true;
+				return false;
 
-			return false;
+			return true;
 		}
 
 		// ...then consider the specificity of the signals
