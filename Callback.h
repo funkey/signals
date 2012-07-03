@@ -33,6 +33,9 @@ class CallbackBase {
 
 public:
 
+	CallbackBase() :
+		_isTransparent(false) {}
+
 	/**
 	 * Comparison operator that sorts callbacks according to their specificity:
 	 *
