@@ -1,0 +1,6 @@
+#include "Slot.h"
+#include "Slots.h"
+#include "Callback.h"
+#include "Sender.h"
+#include "Receiver.h"
+#include "Signal.h"
