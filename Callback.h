@@ -178,7 +178,7 @@ public:
 
 	typedef boost::function<void(SignalType&)> callback_type;
 
-	Callback(callback_type callback, CallbackInvocation invocation) :
+	Callback(callback_type callback, CallbackInvocation invocation = Exclusive) :
 		_callback(callback) {
 
 		if (invocation == Transparent)
