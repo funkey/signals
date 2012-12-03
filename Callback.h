@@ -43,11 +43,6 @@ public:
 	 */
 	bool operator<(const CallbackBase& other) const {
 
-		LOG_ALL(signalslog) << "comparing callback " << typeName(*this) << " with "
-		                    << typeName(other) << "..." << std::endl;
-		LOG_ALL(signalslog) << "I am " << (other.accepts(createSignal()) ? "smaller" : "bigger")
-		                    << std::endl;
-
 		// Return true, if the other callback accepts our signals as well. This
 		// means that our signal type ≤ other signal type, i.e., we are more
 		// specific.
@@ -120,17 +115,20 @@ struct CallbackComparator {
 
 class NoTracking {
 
-protected:
+public:
 
-	template <typename SignalType>
-	boost::function<void(SignalType&)> wrap(boost::function<void(SignalType&)> callback) const {
+	template <typename CallbackType>
+	boost::reference_wrapper<CallbackType> wrap(CallbackType& callback) const {
 
-		return callback;
+		return boost::ref(callback);
 	}
 };
 
-template <typename HolderType>
+template <typename SignalType, typename HolderType>
 class WeakTracking {
+
+	typedef boost::signals2::signal<void(SignalType&)> boost_signal_type;
+	typedef typename boost_signal_type::slot_type      boost_slot_type;
 
 public:
 
@@ -139,16 +137,12 @@ public:
 		_holder = holder;
 	}
 
-protected:
-
-	template <typename SignalType>
-	boost::function<void(SignalType&)> wrap(boost::function<void(SignalType&)> callback) {
-
-		typedef boost::signals2::signal<void(SignalType&)> boost_signal_type;
+	template <typename CallbackType>
+	typename boost::signals2::signal<void(typename CallbackType::signal_type&)>::slot_type wrap(CallbackType& callback) {
 
 		boost::shared_ptr<HolderType> sharedHolder = _holder.lock();
 
-		return typename boost_signal_type::slot_type(callback).track(sharedHolder);
+		return boost_slot_type(boost::ref(callback)).track(sharedHolder);
 	}
 
 private:
@@ -172,10 +166,11 @@ template <
 	typename SignalType,
 	class TrackingPolicy = NoTracking,
 	template <typename ToType> class CastingPolicy = StaticCast>
-class Callback : public CallbackBase, public TrackingPolicy, public CastingPolicy<SignalType&> {
+class Callback : public CallbackBase, public TrackingPolicy, public CastingPolicy<SignalType&>, public boost::noncopyable {
 
 public:
 
+	typedef SignalType                         signal_type;
 	typedef boost::function<void(SignalType&)> callback_type;
 
 	Callback(callback_type callback, CallbackInvocation invocation = Exclusive) :
@@ -197,12 +192,9 @@ public:
 		// reference ≤ SignalType
 		if (accepts(reference)) {
 
-			LOG_ALL(signalslog) << typeName(*this) << ": I can handle signal "
-			                    << typeName(reference) << "!" << std::endl;
-
 			/* Here, we cast whatever comes to Slot<SignalType>. This means,
 			 * that we every once in a while cast Slot<Dervied> to Slot<Base>
-			 * (not that the Slots themselves are not dervied from each other).
+			 * (note that the Slots themselves are not dervied from each other).
 			 *
 			 * What can go wrong?
 			 *
@@ -214,19 +206,16 @@ public:
 			 * Since all the Slot<SignalType>s are identical in memory (we know
 			 * this since we made them), the static casts are safe. We will talk
 			 * to the right object with the wrong name, but this doesn't matter,
-			 * since the all have a boost::signal of the same name -- and there
+			 * since they all have a boost::signal of the same name -- and there
 			 * everything is save again.
 			 */
 			Slot<SignalType>& s = static_cast<Slot<SignalType>&>(slot);
 
-			s.connect(TrackingPolicy::wrap(boost::function<void(SignalType&)>(*this)));
+			s.connect(*this);
 
 			return true;
 
 		} else {
-
-			LOG_ALL(signalslog) << typeName(*this) << ": I cannot handle signal "
-			                    << typeName(reference) << std::endl;
 
 			return false;
 		}

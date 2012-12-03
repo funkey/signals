@@ -30,15 +30,11 @@ public:
 		for (slots_type::iterator slot = _slots.begin();
 		     slot != _slots.end(); ++slot) {
 
-			LOG_ALL(signalslog) << "offering slot " << typeName(*(*slot)) << std::endl;
-
 			bool exclusiveFound = false;
 
 			// find all transparent and the first (most specific) exclusive callback
 			for (Receiver::callbacks_type::iterator callback = receiver.getCallbacks().begin();
 			     callback != receiver.getCallbacks().end(); ++callback) {
-
-				LOG_ALL(signalslog) << "to callback " << typeName(*(*callback)) << std::endl;
 
 				// if this is an exclusive callback and we found another
 				// exclusive one already, continue

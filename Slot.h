@@ -88,14 +88,14 @@ public:
 		return referenceSignal;
 	}
 
-	void connect(boost::function<void(SignalType&)> callback) {
+	template <typename CallbackType>
+	void connect(CallbackType& callback) {
 
-		LOG_ALL(signalslog) << typeName(this) << " connecting to " << typeName(callback) << std::endl;
+		// disconnect any previous links
+		_slot.disconnect(boost::ref(callback));
 
-		// If we want tracking of the callback holder, this is the point to add
-		// it. That means we need a shared_ptr to the holder. The holder should
-		// be a member of the Callback.
-		_slot.connect(callback);
+		// connect to the callback, apply optional tracking
+		_slot.connect(callback.wrap(callback));
 
 		LOG_ALL(signalslog) << typeName(this) << " connected to " << typeName(callback) << std::endl;
 	}
