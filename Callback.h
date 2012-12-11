@@ -58,6 +58,13 @@ public:
 	virtual bool tryToConnect(SlotBase& slot) = 0;
 
 	/**
+	 * Disconnect from the given slot.
+	 *
+	 * @return True, if the callback was previously connected to the slot.
+	 */
+	virtual bool disconnect(SlotBase& slot) = 0;
+
+	/**
 	 * Make this callback transparent. Transparent callbacks will always be
 	 * called, regardless of the existance of other, possibly more specific,
 	 * callbacks. Thus, they are transparent to these other callbacks.
@@ -189,36 +196,60 @@ public:
 
 		const Signal& reference = slot.createSignal();
 
-		// reference ≤ SignalType
-		if (accepts(reference)) {
-
-			/* Here, we cast whatever comes to Slot<SignalType>. This means,
-			 * that we every once in a while cast Slot<Dervied> to Slot<Base>
-			 * (note that the Slots themselves are not dervied from each other).
-			 *
-			 * What can go wrong?
-			 *
-			 * The only thing we do is to call connect(Callback<Base>), where
-			 * instead the object implements connect(Callback<Derived>). In
-			 * connect, we take the actual boost::signal and connect
-			 * Callback<Base>::operator()(Signal&) to it.
-			 *
-			 * Since all the Slot<SignalType>s are identical in memory (we know
-			 * this since we made them), the static casts are safe. We will talk
-			 * to the right object with the wrong name, but this doesn't matter,
-			 * since they all have a boost::signal of the same name -- and there
-			 * everything is save again.
-			 */
-			Slot<SignalType>& s = static_cast<Slot<SignalType>&>(slot);
-
-			s.connect(*this);
-
-			return true;
-
-		} else {
-
+		if (!accepts(reference))
 			return false;
-		}
+
+		/* Here, we cast whatever comes to Slot<SignalType>. This means,
+		 * that we every once in a while cast Slot<Dervied> to Slot<Base>
+		 * (note that the Slots themselves are not dervied from each other).
+		 *
+		 * What can go wrong?
+		 *
+		 * The only thing we do is to call connect(Callback<Base>), where
+		 * instead the object implements connect(Callback<Derived>). In
+		 * connect, we take the actual boost::signal and connect
+		 * Callback<Base>::operator()(Signal&) to it.
+		 *
+		 * Since all the Slot<SignalType>s are identical in memory (we know
+		 * this since we made them), the static casts are safe. We will talk
+		 * to the right object with the wrong name, but this doesn't matter,
+		 * since they all have a boost::signal of the same name -- and there
+		 * everything is save again.
+		 */
+		Slot<SignalType>& s = static_cast<Slot<SignalType>&>(slot);
+
+		s.connect(*this);
+
+		return true;
+	}
+
+	bool disconnect(SlotBase& slot) {
+
+		const Signal& reference = slot.createSignal();
+
+		if (!accepts(reference))
+			return false;
+
+		/* Here, we cast whatever comes to Slot<SignalType>. This means,
+		 * that we every once in a while cast Slot<Dervied> to Slot<Base>
+		 * (note that the Slots themselves are not dervied from each other).
+		 *
+		 * What can go wrong?
+		 *
+		 * The only thing we do is to call connect(Callback<Base>), where
+		 * instead the object implements connect(Callback<Derived>). In
+		 * connect, we take the actual boost::signal and connect
+		 * Callback<Base>::operator()(Signal&) to it.
+		 *
+		 * Since all the Slot<SignalType>s are identical in memory (we know
+		 * this since we made them), the static casts are safe. We will talk
+		 * to the right object with the wrong name, but this doesn't matter,
+		 * since they all have a boost::signal of the same name -- and there
+		 * everything is save again.
+		 */
+		Slot<SignalType>& s = static_cast<Slot<SignalType>&>(slot);
+
+		return s.disconnect(*this);
 	}
 
 	/* The point of this method is to cast the signal -- that was transmitted as

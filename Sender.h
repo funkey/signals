@@ -52,6 +52,24 @@ public:
 		}
 	}
 
+	void disconnect(Receiver& receiver) {
+
+		LOG_ALL(signalslog) << "sender disconnecting from receiver" << std::endl;
+
+		// for every slot we provide
+		for (slots_type::iterator slot = _slots.begin();
+		     slot != _slots.end(); ++slot) {
+
+			// for all callbacks of receiver
+			for (Receiver::callbacks_type::iterator callback = receiver.getCallbacks().begin();
+			     callback != receiver.getCallbacks().end(); ++callback) {
+
+				// disconnect
+				(*callback)->disconnect(*(*slot));
+			}
+		}
+	}
+
 private:
 
 	slots_type _slots;

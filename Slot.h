@@ -4,6 +4,7 @@
 #include <typeinfo>
 
 #include <boost/signals2/signal.hpp>
+#include <boost/thread.hpp>
 
 #include <util/typename.h>
 #include "Signal.h"
@@ -92,12 +93,33 @@ public:
 	void connect(CallbackType& callback) {
 
 		// disconnect any previous links
-		_slot.disconnect(boost::ref(callback));
+		disconnect(callback);
 
 		// connect to the callback, apply optional tracking
 		_slot.connect(callback.wrap(callback));
 
 		LOG_ALL(signalslog) << typeName(this) << " connected to " << typeName(callback) << std::endl;
+	}
+
+	template <typename CallbackType>
+	bool disconnect(CallbackType& callback) {
+
+		boost::mutex::scoped_lock lock(_mutex);
+
+		// remember previous size
+		size_t prevSize = _slot.num_slots();
+
+		// disconnect any previous links
+		_slot.disconnect(boost::ref(callback));
+
+		// if size differs, we have been connected to the callback
+		if (prevSize != _slot.num_slots()) {
+
+			LOG_ALL(signalslog) << typeName(this) << " disconnected from " << typeName(callback) << std::endl;
+			return true;
+		}
+
+		return false;
 	}
 
 	static SignalType referenceSignal;
@@ -112,6 +134,8 @@ protected:
 private:
 
 	boost::signals2::signal<void(SignalType&)> _slot;
+
+	boost::mutex _mutex;
 };
 
 // TODO: I'm not sure if the linker will always find that -- check
