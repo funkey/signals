@@ -36,6 +36,8 @@ public:
 	CallbackBase() :
 		_isTransparent(false) {}
 
+	virtual ~CallbackBase() {}
+
 	/**
 	 * Comparison operator that sorts callbacks according to their specificity:
 	 *
