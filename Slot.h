@@ -16,6 +16,8 @@ class SlotBase {
 
 public:
 
+	virtual ~SlotBase() {}
+
 	/**
 	 * Comparison operator that sorts slots according to their specificity:
 	 *
@@ -59,6 +61,8 @@ class Slot : public SlotBase {
 	// TODO: ensure that SignalType is default constructible
 
 public:
+
+	virtual ~Slot() {}
 
 	/**
 	 * Send a default-constructed signal of type SignalType.
