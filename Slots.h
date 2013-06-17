@@ -11,6 +11,8 @@ class SlotsBase {
 
 public:
 
+	virtual ~SlotsBase() {}
+
 	/**
 	 * Create a new slot.
 	 *
@@ -38,7 +40,7 @@ class Slots : public SlotsBase {
 
 public:
 
-	~Slots() {
+	virtual ~Slots() {
 
 		for (unsigned int i = 0; i < _slots.size(); i++)
 			delete _slots[i];
