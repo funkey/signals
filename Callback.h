@@ -104,6 +104,11 @@ private:
 	bool _isTransparent;
 };
 
+/**
+ * Sorts callbacks based on their invokation type (exclusive precedes 
+ * transparent) and then on the specificity of their signals, i.e., the most 
+ * specific callbacks come first.
+ */
 struct CallbackComparator {
 
 	bool operator()(const CallbackBase* a, const CallbackBase* b) const {
@@ -122,6 +127,10 @@ struct CallbackComparator {
 	}
 };
 
+/**
+ * No-tracking strategy for callbacks. The slots will only keep the plain 
+ * functor implemented by the callback.
+ */
 class NoTracking {
 
 public:
@@ -133,6 +142,13 @@ public:
 	}
 };
 
+/**
+ * Weak pointer tracking strategy for callbacks. For callbacks that use this 
+ * strategy, a connected slot will keep a weak pointer to the callback's holder 
+ * (set via track() on the callback). The weak pointer is locked whenever a 
+ * signal needs to be sent. If locking fails, i.e., the holder does not live 
+ * anymore, the callback gets automatically removed from the slot.
+ */
 template <typename SignalType, typename HolderType>
 class WeakTracking {
 
@@ -152,6 +168,54 @@ public:
 		boost::shared_ptr<HolderType> sharedHolder = _holder.lock();
 
 		return boost_slot_type(boost::ref(callback)).track(sharedHolder);
+	}
+
+private:
+
+	mutable boost::weak_ptr<HolderType> _holder;
+};
+
+/**
+ * Shared pointer tracking for callbacks. For callbacks that use this strategy, 
+ * a connected slot will keep a shared pointer to the callback's holder and thus 
+ * makes sure that the holder will live at least as long as the connection to 
+ * the slot is established.
+ */
+template <typename SignalType, typename HolderType>
+class SharedTracking {
+
+	typedef boost::signals2::signal<void(SignalType&)> boost_signal_type;
+	typedef typename boost_signal_type::slot_type      boost_slot_type;
+
+public:
+
+	template <typename CallbackType>
+	struct SharedHolderCallback {
+
+		SharedHolderCallback(CallbackType& callback_, boost::shared_ptr<HolderType> holder_) :
+			callback(&callback_),
+			holder(holder_) {}
+
+		void operator()(SignalType& signal) {
+
+			(*callback)(signal);
+		}
+
+		CallbackType* callback;
+		boost::shared_ptr<HolderType> holder;
+	};
+
+	void track(boost::shared_ptr<HolderType> holder) const {
+
+		_holder = holder;
+	}
+
+	template <typename CallbackType>
+	SharedHolderCallback<CallbackType> wrap(CallbackType& callback) {
+
+		boost::shared_ptr<HolderType> sharedHolder = _holder.lock();
+
+		return SharedHolderCallback<CallbackType>(callback, sharedHolder);
 	}
 
 private:
