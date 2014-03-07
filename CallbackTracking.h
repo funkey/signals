@@ -14,7 +14,7 @@ class NoTracking {
 public:
 
 	template <typename SignalType>
-	CallbackInvoker<SignalType> createInvoker(boost::function<void(SignalType&)> callback) {
+	CallbackInvoker<SignalType> createInvoker(boost::reference_wrapper<boost::function<void(SignalType&)> > callback) {
 
 		return CallbackInvoker<SignalType>(callback);
 	}
@@ -38,7 +38,7 @@ public:
 	}
 
 	template <typename SignalType>
-	CallbackInvoker<SignalType> createInvoker(boost::function<void(SignalType&)> callback) {
+	CallbackInvoker<SignalType> createInvoker(boost::reference_wrapper<boost::function<void(SignalType&)> > callback) {
 
 		CallbackInvoker<SignalType> invoker(callback);
 		invoker.setWeakTracking(_holder);
@@ -68,7 +68,7 @@ public:
 	}
 
 	template <typename SignalType>
-	CallbackInvoker<SignalType> createInvoker(boost::function<void(SignalType&)> callback) {
+	CallbackInvoker<SignalType> createInvoker(boost::reference_wrapper<boost::function<void(SignalType&)> > callback) {
 
 		CallbackInvoker<SignalType> invoker(callback);
 		invoker.setSharedTracking(_holder.lock());

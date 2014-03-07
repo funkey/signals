@@ -7,6 +7,7 @@
 #include <boost/thread.hpp>
 
 #include <util/typename.h>
+#include "CallbackInvoker.h"
 #include "Signal.h"
 #include "Logging.h"
 
@@ -105,7 +106,7 @@ public:
 
 		addInvoker(callback.getInvoker());
 
-		LOG_ALL(signalslog) << typeName(this) << " connected to " << typeName(callback) << std::endl;
+		LOG_ALL(signalslog) << typeName(callback) << " connected to " << typeName(this) << std::endl;
 
 		return true;
 	}
@@ -121,10 +122,13 @@ public:
 
 		removeInvoker(callback.getInvoker());
 
-		LOG_ALL(signalslog) << typeName(this) << " disconnected from " << typeName(callback) << std::endl;
+		LOG_ALL(signalslog) << typeName(callback) << " disconnected from " << typeName(this) << std::endl;
 
 		return true;
 	}
+
+	// a reference signal for type comparison
+	static SignalType referenceSignal;
 
 private:
 
@@ -149,7 +153,7 @@ private:
 
 	void removeInvoker(const CallbackInvokerType& invoker) {
 
-		CallbackInvokersType::iterator i = std::find(_invokers.begin(), _invokers.end(), invoker);
+		typename CallbackInvokersType::iterator i = std::find(_invokers.begin(), _invokers.end(), invoker);
 
 		if (i != _invokers.end())
 			_invokers.erase(i);
@@ -160,13 +164,17 @@ private:
 		bool foundStaleInvokers = false;
 
 		// for each callback invoker
-		for (CallbackInvokersType::iterator invoker = _invokers.begin(), invoker != _invokers.end(), invoker++) {
+		for (typename CallbackInvokersType::iterator invoker = _invokers.begin(); invoker != _invokers.end(); invoker++) {
+
+			LOG_ALL(signalslog) << "processing callback invoker " << typeName(*invoker) << std::endl;
 
 			// try to get the callback lock
-			CallbackInvokerType::Lock lock = invoker->lock();
+			typename CallbackInvokerType::Lock lock = invoker->lock();
 
 			// if failed, add invoker to list of stale invokers
 			if (!lock) {
+
+				LOG_ALL(signalslog) << "callback invoker " << typeName(*invoker) << " got stale" << std::endl;
 
 				_staleInvokers.push_back(*invoker);
 				foundStaleInvokers = true;
@@ -184,18 +192,17 @@ private:
 			return;
 
 		// for each stale invoker
-		for (CallbackInvokersType::iterator invoker = _staleInvokers.begin(), invoker != _staleInvokers.end(), invoker++) {
+		for (typename CallbackInvokersType::iterator invoker = _staleInvokers.begin(); invoker != _staleInvokers.end(); invoker++) {
 
 			// remove it
 			removeInvoker(*invoker);
+
+			LOG_ALL(signalslog) << "removed stale invoker " << typeName(*invoker) << std::endl;
 		}
 
 		// clear stale invokers
 		_staleInvokers.clear();
 	}
-
-	// a reference signal for type comparison
-	static SignalType referenceSignal;
 
 	// list of callback invokers
 	CallbackInvokersType _invokers;

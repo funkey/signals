@@ -2,7 +2,9 @@
 #define SIGNALS_CALLBACK_INVOKER_H__
 
 #include <boost/function.hpp>
+#include <boost/ref.hpp>
 #include <boost/shared_ptr.hpp>
+#include "Logging.h"
 
 namespace signals {
 
@@ -25,7 +27,10 @@ public:
 
 		Lock(bool isGood) :
 			_isGood(isGood),
-			_isWeakTracking(false) {}
+			_isWeakTracking(false) {
+
+			LOG_ALL(signalslog) << "created an always " << (isGood ? "good" : "bad") << " lock" << std::endl;
+		}
 
 		Lock(boost::weak_ptr<void> weakTrackedObject) :
 			_isGood(true),
@@ -38,13 +43,14 @@ public:
 				return false;
 
 			if (_isWeakTracking)
-				return _weaklyTrackedObject;
+				return _weakObjectLock;
 
 			return true;
 		}
 
 	private:
 
+		bool _isGood;
 		bool _isWeakTracking;
 
 		boost::shared_ptr<void> _weakObjectLock;
@@ -53,8 +59,10 @@ public:
 	/**
 	 * Create a callback invoker from a boost::function.
 	 */
-	CallbackInvoker(boost::function<void(SignalType&)> callback) :
-		_callback(callback) {}
+	CallbackInvoker(boost::reference_wrapper<boost::function<void(SignalType&)> > callback) :
+		_callback(callback),
+		_isWeakTracking(false),
+		_isSharedTracking(false) {}
 
 	/**
 	 * Register an object for weak tracking. The invoker will only be successful 
@@ -88,7 +96,9 @@ public:
 	 *   if (lock)
 	 *     invoker(signal); // save to assume weak tracked object exists
 	 */
-	Lock& lock() {
+	Lock lock() {
+
+		LOG_ALL(signalslog) << "create lock, weak tracking = " << _isWeakTracking << ", shared tracking = " << _isSharedTracking << ", shared object = " << _sharedTrackedObject << std::endl;
 
 		if (_isWeakTracking)
 			return Lock(_weaklyTrackedObject);
@@ -98,22 +108,21 @@ public:
 		return Lock(true);
 	}
 
-	/* The point of this method is to cast the signal -- that was transmitted as
-	 * a Signal -- to SignalType (where SignalType can be ≥ than the actual type
-	 * of the signal).
+	/**
+	 * Send a signal via this callback invoker.
 	 */
-	void operator()(SignalType& signal) {
+	//void operator()(SignalType& signal) {
 
-		_callback(signal);
-	}
+		//_callback(signal);
+	//}
 
-	/* The point of this method is to cast the signal -- that was transmitted as
-	 * a Signal -- to SignalType (where SignalType can be ≥ than the actual type
-	 * of the signal).
+	/**
+	 * Send a signal via this callback invoker.
 	 */
-	void operator()(const SignalType& signal) {
+	template <typename T>
+	void operator()(T& signal) {
 
-		_callback(signal);
+		boost::unwrap_ref(_callback)(signal);
 	}
 
 	/**
@@ -122,13 +131,19 @@ public:
 	 */
 	bool operator==(const CallbackInvoker<SignalType>& other) {
 
-		return _callback == other._callback;
+		return (_callback.get_pointer() == other._callback.get_pointer());
+
+		//boost::signals2::signal<void(SignalType&)> boostSignal;
+		//boostSignal.connect(_callback);
+		//boostSignal.disconnect(other._callback);
+
+		//return (boostSignal.num_slots() == 0);
 	}
 
 private:
 
 	// the function that will be called by this invoker
-	boost::function<void(SignalType&)> _callback;
+	boost::reference_wrapper<boost::function<void(SignalType&)> > _callback;
 
 	// weak pointer to an object that is tracked by this invoker
 	boost::weak_ptr<void> _weaklyTrackedObject;

@@ -140,7 +140,11 @@ template <
 	typename SignalType,
 	typename TrackingPolicy = NoTracking,
 	template <typename ToType> class CastingPolicy = StaticCast>
-class Callback : public CallbackBase, public TrackingPolicy, public CastingPolicy<SignalType&> {
+class Callback :
+		public CallbackBase,
+		public TrackingPolicy,
+		public CastingPolicy<SignalType&>,
+		public boost::noncopyable /* prevents references to _callback to get invalidated */ {
 
 public:
 
@@ -249,7 +253,7 @@ public:
 	CallbackInvoker<SignalType> getInvoker() {
 
 		// delegate creation of the invoker to the tracking policy
-		return createInvoker(_callback);
+		return createInvoker(boost::ref(_callback));
 	}
 
 private:
