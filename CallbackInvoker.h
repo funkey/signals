@@ -132,12 +132,6 @@ public:
 	bool operator==(const CallbackInvoker<SignalType>& other) {
 
 		return (_callback.get_pointer() == other._callback.get_pointer());
-
-		//boost::signals2::signal<void(SignalType&)> boostSignal;
-		//boostSignal.connect(_callback);
-		//boostSignal.disconnect(other._callback);
-
-		//return (boostSignal.num_slots() == 0);
 	}
 
 private:

@@ -3,7 +3,6 @@
 
 #include <typeinfo>
 
-#include <boost/signals2/signal.hpp>
 #include <boost/thread.hpp>
 
 #include <util/typename.h>
