@@ -58,8 +58,6 @@ struct SlotComparator {
 template <typename SignalType>
 class Slot : public SlotBase {
 
-	// TODO: ensure that SignalType is default constructible
-
 public:
 
 	virtual ~Slot() {}
@@ -73,7 +71,7 @@ public:
 
 		LOG_ALL(signalslog) << typeName(this) << " sending signal " << typeName(signal) << std::endl;
 
-		_slot(signal);
+		send(signal);
 	}
 
 	/**
@@ -85,65 +83,129 @@ public:
 
 		LOG_ALL(signalslog) << typeName(this) << " sending signal " << typeName(signal) << std::endl;
 
-		_slot(signal);
+		send(signal);
 	}
 
+	/**
+	 * Create a reference signal of this slot.
+	 */
 	const Signal& createSignal() const {
 
 		return referenceSignal;
 	}
 
+	/**
+	 * Connect a callback to this slot.
+	 */
 	template <typename CallbackType>
-	void connect(CallbackType& callback) {
+	bool connect(CallbackType& callback) {
 
-		// disconnect any previous links
-		disconnect(callback);
+		if (isConnected(callback))
+			return false;
 
-		// connect to the callback, apply optional tracking
-		_slot.connect(callback.wrap(callback));
+		addInvoker(callback.getInvoker());
 
 		LOG_ALL(signalslog) << typeName(this) << " connected to " << typeName(callback) << std::endl;
+
+		return true;
 	}
 
+	/**
+	 * Disconnect a callback from this slot.
+	 */
 	template <typename CallbackType>
 	bool disconnect(CallbackType& callback) {
 
-		boost::mutex::scoped_lock lock(_mutex);
+		if (!isConnected(callback))
+			return false;
 
-		// remember previous size
-		size_t prevSize = _slot.num_slots();
+		removeInvoker(callback.getInvoker());
 
-		// disconnect any previous links
-		_slot.disconnect(boost::ref(callback));
+		LOG_ALL(signalslog) << typeName(this) << " disconnected from " << typeName(callback) << std::endl;
 
-		// if size differs, we have been connected to the callback
-		if (prevSize != _slot.num_slots()) {
-
-			LOG_ALL(signalslog) << typeName(this) << " disconnected from " << typeName(callback) << std::endl;
-			return true;
-		}
-
-		return false;
+		return true;
 	}
 
-	static SignalType referenceSignal;
+private:
 
-protected:
+	typedef CallbackInvoker<SignalType>      CallbackInvokerType;
+	typedef std::vector<CallbackInvokerType> CallbackInvokersType;
 
 	bool canSend(const Signal& signal) const {
 
 		return dynamic_cast<const SignalType*>(&signal);
 	}
 
-private:
+	template <typename CallbackType>
+	bool isConnected(CallbackType& callback) {
 
-	boost::signals2::signal<void(SignalType&)> _slot;
+		return std::find(_invokers.begin(), _invokers.end(), callback.getInvoker()) != _invokers.end();
+	}
 
+	void addInvoker(const CallbackInvokerType& invoker) {
+
+		_invokers.push_back(invoker);
+	}
+
+	void removeInvoker(const CallbackInvokerType& invoker) {
+
+		CallbackInvokersType::iterator i = std::find(_invokers.begin(), _invokers.end(), invoker);
+
+		if (i != _invokers.end())
+			_invokers.erase(i);
+	}
+
+	void send(SignalType& signal) {
+
+		bool foundStaleInvokers = false;
+
+		// for each callback invoker
+		for (CallbackInvokersType::iterator invoker = _invokers.begin(), invoker != _invokers.end(), invoker++) {
+
+			// try to get the callback lock
+			CallbackInvokerType::Lock lock = invoker->lock();
+
+			// if failed, add invoker to list of stale invokers
+			if (!lock) {
+
+				_staleInvokers.push_back(*invoker);
+				foundStaleInvokers = true;
+
+				continue;
+
+			// otherwise, call
+			} else {
+
+				(*invoker)(signal);
+			}
+		}
+
+		if (!foundStaleInvokers)
+			return;
+
+		// for each stale invoker
+		for (CallbackInvokersType::iterator invoker = _staleInvokers.begin(), invoker != _staleInvokers.end(), invoker++) {
+
+			// remove it
+			removeInvoker(*invoker);
+		}
+
+		// clear stale invokers
+		_staleInvokers.clear();
+	}
+
+	// a reference signal for type comparison
+	static SignalType referenceSignal;
+
+	// list of callback invokers
+	CallbackInvokersType _invokers;
+
+	// list of callback invokers that failed to lock and should be removed
+	CallbackInvokersType _staleInvokers;
+
+	// mutex to prevent concurrent access to the invoker list
 	boost::mutex _mutex;
 };
-
-// TODO: I'm not sure if the linker will always find that -- check
-// parashift.com, there was an FAQ for that (static members in template class)
 
 // If you got an error here, that means most likely that you have a signal that
 // does not provide a default constructor.

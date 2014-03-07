@@ -6,28 +6,13 @@
 #include <boost/function.hpp>
 
 #include <util/typename.h>
+#include "CallbackInvocation.h"
+#include "CallbackInvoker.h"
+#include "CallbackTracking.h"
 #include "Slot.h"
 #include "Logging.h"
 
 namespace signals {
-
-/**
- * Type to indicate how to invoke a callback.
- */
-enum CallbackInvocation {
-
-	/**
-	 * Of all compatible exclusive callbacks, only the most specific will be
-	 * called.
-	 */
-	Exclusive,
-
-	/**
-	 * Transparent callbacks will always be called, regardless of the existance
-	 * of other, possibly more specific, callbacks.
-	 */
-	Transparent
-};
 
 class CallbackBase {
 
@@ -128,101 +113,8 @@ struct CallbackComparator {
 };
 
 /**
- * No-tracking strategy for callbacks. The slots will only keep the plain 
- * functor implemented by the callback.
+ * TODO: is this needed at all?
  */
-class NoTracking {
-
-public:
-
-	template <typename CallbackType>
-	boost::reference_wrapper<CallbackType> wrap(CallbackType& callback) const {
-
-		return boost::ref(callback);
-	}
-};
-
-/**
- * Weak pointer tracking strategy for callbacks. For callbacks that use this 
- * strategy, a connected slot will keep a weak pointer to the callback's holder 
- * (set via track() on the callback). The weak pointer is locked whenever a 
- * signal needs to be sent. If locking fails, i.e., the holder does not live 
- * anymore, the callback gets automatically removed from the slot.
- */
-template <typename SignalType, typename HolderType>
-class WeakTracking {
-
-	typedef boost::signals2::signal<void(SignalType&)> boost_signal_type;
-	typedef typename boost_signal_type::slot_type      boost_slot_type;
-
-public:
-
-	void track(boost::shared_ptr<HolderType> holder) const {
-
-		_holder = holder;
-	}
-
-	template <typename CallbackType>
-	typename boost::signals2::signal<void(typename CallbackType::signal_type&)>::slot_type wrap(CallbackType& callback) {
-
-		boost::shared_ptr<HolderType> sharedHolder = _holder.lock();
-
-		return boost_slot_type(boost::ref(callback)).track(sharedHolder);
-	}
-
-private:
-
-	mutable boost::weak_ptr<HolderType> _holder;
-};
-
-/**
- * Shared pointer tracking for callbacks. For callbacks that use this strategy, 
- * a connected slot will keep a shared pointer to the callback's holder and thus 
- * makes sure that the holder will live at least as long as the connection to 
- * the slot is established.
- */
-template <typename SignalType, typename HolderType>
-class SharedTracking {
-
-	typedef boost::signals2::signal<void(SignalType&)> boost_signal_type;
-	typedef typename boost_signal_type::slot_type      boost_slot_type;
-
-public:
-
-	template <typename CallbackType>
-	struct SharedHolderCallback {
-
-		SharedHolderCallback(CallbackType& callback_, boost::shared_ptr<HolderType> holder_) :
-			callback(&callback_),
-			holder(holder_) {}
-
-		void operator()(SignalType& signal) {
-
-			(*callback)(signal);
-		}
-
-		CallbackType* callback;
-		boost::shared_ptr<HolderType> holder;
-	};
-
-	void track(boost::shared_ptr<HolderType> holder) const {
-
-		_holder = holder;
-	}
-
-	template <typename CallbackType>
-	SharedHolderCallback<CallbackType> wrap(CallbackType& callback) {
-
-		boost::shared_ptr<HolderType> sharedHolder = _holder.lock();
-
-		return SharedHolderCallback<CallbackType>(callback, sharedHolder);
-	}
-
-private:
-
-	mutable boost::weak_ptr<HolderType> _holder;
-};
-
 template <typename ToType>
 class StaticCast {
 
@@ -235,17 +127,38 @@ public:
 	}
 };
 
+/**
+ * Callback for a specific signal type. A tracking policy can be specified as a 
+ * template parameter. This can be used to track the lifetime of an object and 
+ * invoke the callback only if the tracked object is still alive. Currently 
+ * available are NoTracking (default), WeakTracking (track an arbitrary object 
+ * via a weak pointer, invoke callback only if weak pointer can be locked), and 
+ * SharedTracking (keep an arbitrary object alive via a shared pointer as long 
+ * as any invoker of the callback is used).
+ */
 template <
 	typename SignalType,
-	class TrackingPolicy = NoTracking,
+	typename TrackingPolicy = NoTracking,
 	template <typename ToType> class CastingPolicy = StaticCast>
-class Callback : public CallbackBase, public TrackingPolicy, public CastingPolicy<SignalType&>, public boost::noncopyable {
+class Callback : public CallbackBase, public TrackingPolicy, public CastingPolicy<SignalType&> {
 
 public:
 
 	typedef SignalType                         signal_type;
 	typedef boost::function<void(SignalType&)> callback_type;
 
+	/**
+	 * Create a new callback.
+	 *
+	 * @param callback
+	 *              Any expression that can be cast into a 
+	 *              boost::function<void(SignalType&)>.
+	 *
+	 * @param invocation
+	 *              Optional invocation type. Influences which callbacks are  
+	 *              connected to signals, if several callbacks are compatible.  
+	 *              See CallbackInvocation.
+	 */
 	Callback(callback_type callback, CallbackInvocation invocation = Exclusive) :
 		_callback(callback) {
 
@@ -253,11 +166,13 @@ public:
 			setTransparent();
 	}
 
-	bool accepts(const Signal& signal) const {
-
-		return dynamic_cast<const SignalType*>(&signal);
-	}
-
+	/**
+	 * Try to connect this callback to the given slot.
+	 *
+	 * @return
+	 *         true, if the callback and slot are type compatible and have been 
+	 *         connected.
+	 */
 	bool tryToConnect(SlotBase& slot) {
 
 		const Signal& reference = slot.createSignal();
@@ -289,6 +204,13 @@ public:
 		return true;
 	}
 
+	/**
+	 * Disconnect this callback from the given slot.
+	 *
+	 * @return
+	 *         true, if the callback and slot are type compatible and have been 
+	 *         disconnected.
+	 */
 	bool disconnect(SlotBase& slot) {
 
 		const Signal& reference = slot.createSignal();
@@ -315,39 +237,36 @@ public:
 		 */
 		Slot<SignalType>& s = static_cast<Slot<SignalType>&>(slot);
 
-		return s.disconnect(*this);
+		s.disconnect(*this);
+
+		return true;
 	}
 
-	/* The point of this method is to cast the signal -- that was transmitted as
-	 * a Signal -- to SignalType (where SignalType can be ≥ than the actual type
-	 * of the signal).
+	/**
+	 * Get an invoker for this callback. The invoker can be used as a function 
+	 * to send a signal to this callback.
 	 */
-	void operator()(Signal& signal) {
+	CallbackInvoker<SignalType> getInvoker() {
 
-		SignalType& casted = CastingPolicy<SignalType&>::cast(signal);
-
-		_callback(casted);
+		// delegate creation of the invoker to the tracking policy
+		return createInvoker(_callback);
 	}
 
-	/* The point of this method is to cast the signal -- that was transmitted as
-	 * a Signal -- to SignalType (where SignalType can be ≥ than the actual type
-	 * of the signal).
+private:
+
+	/**
+	 * Return true if this callback can accept the provided signal, i.e., if the 
+	 * signal's type is equal to or a superclass of SignalType.
 	 */
-	void operator()(const Signal& signal) {
+	bool accepts(const Signal& signal) const {
 
-		const SignalType& casted = CastingPolicy<SignalType&>::cast(signal);
-
-		_callback(casted);
+		return dynamic_cast<const SignalType*>(&signal);
 	}
-
-protected:
 
 	const Signal& createSignal() const {
 
 		return Slot<SignalType>::referenceSignal;
 	}
-
-private:
 
 	callback_type _callback;
 };
