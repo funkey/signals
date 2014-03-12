@@ -5,6 +5,7 @@
 
 #include <boost/thread.hpp>
 
+#include <util/exceptions.h>
 #include <util/typename.h>
 #include "CallbackInvoker.h"
 #include "Signal.h"
@@ -183,7 +184,14 @@ private:
 			// otherwise, call
 			} else {
 
-				(*invoker)(signal);
+				try {
+
+					(*invoker)(signal);
+
+				} catch (boost::exception& e) {
+
+					UTIL_THROW_EXCEPTION(SignalsError, typeName(*this) << " function call did not succeed");
+				}
 			}
 		}
 
