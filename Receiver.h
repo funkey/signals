@@ -14,6 +14,11 @@ public:
 
 	void registerCallback(CallbackBase& callback) {
 
+		// make sure that transparent callbacks or callbacks of the same 
+		// specificity are called in the reverse order in which they have been 
+		// added
+		callback.setPrecendence(_callbacks.size());
+
 		_callbacks.push_back(&callback);
 		_callbacks.sort(CallbackComparator());
 	}

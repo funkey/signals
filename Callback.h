@@ -19,7 +19,8 @@ class CallbackBase {
 public:
 
 	CallbackBase() :
-		_isTransparent(false) {}
+		_isTransparent(false),
+		_precedence(0) {}
 
 	virtual ~CallbackBase() {}
 
@@ -69,6 +70,21 @@ public:
 		return _isTransparent;
 	}
 
+	/**
+	 * Set the precedence for this callback. If two callbacks are both 
+	 * transparent or have the same specificity, the one with the higher 
+	 * precedence will be called first.
+	 */
+	void setPrecendence(unsigned int precedence) {
+
+		_precedence = precedence;
+	}
+
+	unsigned int getPrecedence() const {
+
+		return _precedence;
+	}
+
 protected:
 
 	/**
@@ -87,6 +103,9 @@ private:
 
 	// indicates that this is a transparent callback
 	bool _isTransparent;
+
+	// final sorting criteria for otherwise equal callbacks
+	unsigned int _precedence;
 };
 
 /**
@@ -98,17 +117,24 @@ struct CallbackComparator {
 
 	bool operator()(const CallbackBase* a, const CallbackBase* b) const {
 
-		// sort all transparent callbacks to the end...
-		if (a->isTransparent() != b->isTransparent()) {
+		// both are transparent, the precedence decides
+		if (a->isTransparent() && b->isTransparent())
+			return a->getPrecedence() > b->getPrecedence();
 
-			if (a->isTransparent())
+		// both are exclusive, casting decides, then precedence
+		if (!a->isTransparent() && !b->isTransparent()) {
+
+			if (*a < *b)
+				return true;
+
+			if (*b < *a)
 				return false;
 
-			return true;
+			return a->getPrecedence() > b->getPrecedence();
 		}
 
-		// ...then consider the specificity of the signals
-		return *a < *b;
+		// exactly one of them is transparent, sort it to the back
+		return b->isTransparent();
 	}
 };
 
