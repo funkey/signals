@@ -184,14 +184,7 @@ private:
 			// otherwise, call
 			} else {
 
-				try {
-
-					(*invoker)(signal);
-
-				} catch (boost::exception& e) {
-
-					UTIL_THROW_EXCEPTION(SignalsError, typeName(*this) << " function call did not succeed");
-				}
+				(*invoker)(signal);
 			}
 		}
 
