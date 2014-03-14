@@ -279,7 +279,7 @@ public:
 	CallbackInvoker<SignalType> getInvoker() {
 
 		// delegate creation of the invoker to the tracking policy
-		return createInvoker(boost::ref(_callback));
+		return this->createInvoker(boost::ref(_callback));
 	}
 
 private:
