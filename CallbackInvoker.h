@@ -43,7 +43,7 @@ public:
 				return false;
 
 			if (_isWeakTracking)
-				return _weakObjectLock;
+				return static_cast<bool>(_weakObjectLock);
 
 			return true;
 		}
