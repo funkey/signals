@@ -2,7 +2,8 @@
 #define SIGNALS_RECEIVER_H__
 
 #include <vector>
-#include "Callback.h"
+#include "CallbackBase.h"
+#include "CallbackComparator.h"
 
 namespace signals {
 

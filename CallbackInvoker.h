@@ -2,7 +2,6 @@
 #define SIGNALS_CALLBACK_INVOKER_H__
 
 #include <boost/function.hpp>
-#include <boost/ref.hpp>
 #include <boost/shared_ptr.hpp>
 #include "Logging.h"
 

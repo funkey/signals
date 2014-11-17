@@ -2,10 +2,13 @@
 #define SIGNALS_SENDER_H__
 
 #include <vector>
-#include "Slot.h"
-#include "Receiver.h"
+#include "SlotComparator.h"
 
 namespace signals {
+
+// forward declaration
+class SlotBase;
+class Receiver;
 
 class Sender {
 
@@ -30,25 +33,7 @@ public:
 		for (slots_type::iterator slot = _slots.begin();
 		     slot != _slots.end(); ++slot) {
 
-			bool exclusiveFound = false;
-
-			// find all transparent and the first (most specific) exclusive callback
-			for (Receiver::callbacks_type::iterator callback = receiver.getCallbacks().begin();
-			     callback != receiver.getCallbacks().end(); ++callback) {
-
-				// if this is an exclusive callback and we found another
-				// exclusive one already, continue
-				if (!(*callback)->isTransparent() && exclusiveFound)
-					continue;
-
-				// if connection could be established
-				if ((*callback)->tryToConnect(*(*slot))) {
-
-					// we assigned the exclusive callback
-					if (!(*callback)->isTransparent())
-						exclusiveFound = true;
-				}
-			}
+			(*slot)->connect(receiver);
 		}
 	}
 
@@ -60,13 +45,7 @@ public:
 		for (slots_type::iterator slot = _slots.begin();
 		     slot != _slots.end(); ++slot) {
 
-			// for all callbacks of receiver
-			for (Receiver::callbacks_type::iterator callback = receiver.getCallbacks().begin();
-			     callback != receiver.getCallbacks().end(); ++callback) {
-
-				// disconnect
-				(*callback)->disconnect(*(*slot));
-			}
+			(*slot)->disconnect(receiver);
 		}
 	}
 

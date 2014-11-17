@@ -1,60 +1,16 @@
 #ifndef SIGNALS_SLOT_H__
 #define SIGNALS_SLOT_H__
 
-#include <typeinfo>
-
 #include <boost/thread.hpp>
 
-#include <util/exceptions.h>
 #include <util/typename.h>
 #include "CallbackInvoker.h"
 #include "Signal.h"
+#include "SlotBase.h"
+#include "Receiver.h"
 #include "Logging.h"
 
 namespace signals {
-
-class SlotBase {
-
-public:
-
-	virtual ~SlotBase() {}
-
-	/**
-	 * Comparison operator that sorts slots according to their specificity:
-	 *
-	 * Slot<Derived> < Slot<Base>
-	 */
-	bool operator<(const SlotBase& other) const {
-
-		// Return true, if the other slot can send our signals as well. This
-		// means that our signal type ≤ other signal type, i.e., we are more
-		// specific.
-		return other.canSend(createSignal());
-	}
-
-	/**
-	 * Create a reference signal for run-time type inference. This reference is
-	 * used to find compatible pairs of slots and callbacks.
-	 */
-	virtual const Signal& createSignal() const = 0;
-
-protected:
-
-	/**
-	 * Return true, if the passed signal can be cast to the signal type this
-	 * slot provides. This is to determine whether a slot can send a signal of
-	 * the given type.
-	 */
-	virtual bool canSend(const Signal& signal) const = 0;
-};
-
-struct SlotComparator {
-
-	bool operator()(const SlotBase* a, const SlotBase* b) const {
-
-		return *a < *b;
-	}
-};
 
 template <typename SignalType>
 class Slot : public SlotBase {
@@ -96,10 +52,51 @@ public:
 	}
 
 	/**
-	 * Connect a callback to this slot.
+	 * Connect to all compatible callbacks of the given reveiver.
+	 */
+	bool connect(Receiver& receiver) {
+
+		bool exclusiveFound = false;
+
+		// find all transparent and the first (most specific) exclusive callback
+		for (Receiver::callbacks_type::iterator callback = receiver.getCallbacks().begin();
+			 callback != receiver.getCallbacks().end(); ++callback) {
+
+			// if this is an exclusive callback and we found another
+			// exclusive one already, continue
+			if (!(*callback)->isTransparent() && exclusiveFound)
+				continue;
+
+			// if connection could be established
+			if ((*callback)->connect(*this)) {
+
+				// we assigned the exclusive callback
+				if (!(*callback)->isTransparent())
+					exclusiveFound = true;
+			}
+		}
+
+		return true;
+	}
+
+	bool disconnect(Receiver& receiver) {
+
+		// for all callbacks of receiver
+		for (Receiver::callbacks_type::iterator callback = receiver.getCallbacks().begin();
+			 callback != receiver.getCallbacks().end(); ++callback) {
+
+			// disconnect
+			(*callback)->disconnect(*this);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Add a callback to this slot.
 	 */
 	template <typename CallbackType>
-	bool connect(CallbackType& callback) {
+	bool addCallback(CallbackType& callback) {
 
 		if (isConnected(callback))
 			return false;
@@ -125,6 +122,14 @@ public:
 		LOG_ALL(signalslog) << typeName(callback) << " disconnected from " << typeName(this) << std::endl;
 
 		return true;
+	}
+
+	/**
+	 * Get the number of callbacks that are registered for this slot.
+	 */
+	size_t numTargets() const {
+
+		return _invokers.size();
 	}
 
 	// a reference signal for type comparison
