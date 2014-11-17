@@ -2,6 +2,7 @@
 #define SIGNALS_LOGGING_H__
 
 #include <util/Logger.h>
+#include <util/typename.h>
 
 namespace signals {
 

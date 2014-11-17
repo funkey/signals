@@ -3,7 +3,6 @@
 
 #include <boost/thread.hpp>
 
-#include <util/typename.h>
 #include "CallbackInvoker.h"
 #include "Signal.h"
 #include "SlotBase.h"

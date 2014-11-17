@@ -1,16 +1,15 @@
 #ifndef SIGNALS_PASS_THROUGH_SLOT_H__
 #define SIGNALS_PASS_THROUGH_SLOT_H__
 
-#include "SlotBase.h"
-
-// forward declaration
-template <typename SignalType>
-class PassThroughCallback;
+#include "PassThroughSlotBase.h"
+#include "PassThroughCallbackBase.h"
 
 namespace signals {
 
-template <typename SignalType>
-class PassThroughSlot : public SlotBase {
+template <typename SignalType = signals::Signal>
+class PassThroughSlot : public PassThroughSlotBase {
+
+public:
 
 	/**
 	 * Create a reference signal of this slot.
@@ -25,7 +24,15 @@ class PassThroughSlot : public SlotBase {
 	 * receiver for future reference and connect every source at the other side 
 	 * (a PassThroughCallback) with every currently connected receiver.
 	 */
-	bool connect(Receiver&) {
+	bool connect(Receiver& receiver) {
+
+		// remember this receiver
+		addReceiver(receiver);
+
+		// connect all registered slots at the other side to the new receiver
+		typename PassThroughCallbackBase::slots_type::iterator slot;
+		for (slot = getSource().getSlots().begin(); slot != getSource().getSlots().end(); slot++)
+			(*slot)->connect(receiver);
 
 		return true;
 	}
@@ -34,14 +41,21 @@ class PassThroughSlot : public SlotBase {
 	 * Disconnect this slot from the given receiver and remove the pointer to 
 	 * the receiver.
 	 */
-	bool disconnect(Receiver&) {
+	bool disconnect(Receiver& receiver) {
+
+		removeReceiver(receiver);
+
+		// disconnect all registered slots at the other side from this receiver
+		typename PassThroughCallbackBase::slots_type::iterator slot;
+		for (slot = getSource().getSlots().begin(); slot != getSource().getSlots().end(); slot++)
+			(*slot)->disconnect(receiver);
 
 		return true;
 	}
 
 private:
 
-	void setSource(PassThroughCallback<SignalType>& source) {
+	void setSource(PassThroughCallbackBase& source) {
 
 		_source = &source;
 	}
@@ -51,7 +65,8 @@ private:
 		return dynamic_cast<const SignalType*>(&signal);
 	}
 
-	PassThroughCallback<SignalType>* _source;
+	// all receivers that are connected to this slot
+	std::set<Receiver*> _receivers;
 };
 
 } // namespace signals

@@ -2,14 +2,22 @@
 #define SIGNALS_PASS_TROUGH_CALLBACK_H__
 
 #include "CallbackBase.h"
-#include "PassThroughSlot.h"
+#include "PassThroughCallbackBase.h"
+#include "PassThroughSlotBase.h"
 
 namespace signals {
 
-template <typename SignalType>
-class PassThroughCallback : public CallbackBase {
+template <typename SignalType = signals::Signal>
+class PassThroughCallback : public PassThroughCallbackBase {
 
 public:
+
+	PassThroughCallback() {
+
+		// pass through callbacks should always be connected to, even if more 
+		// specific callbacks are registered in the same receiver
+		setTransparent();
+	}
 
 	/**
 	 * Connect this callback to the given slot. This function checks whether the 
@@ -21,9 +29,19 @@ public:
 	 * @return
 	 *         true, if the callback and slot are type compatible.
 	 */
-	bool connect(SlotBase&) {
+	bool connect(SlotBase& slot) {
 
-		// use accept()
+		// check if slot's signal should be passed through
+		if (!accepts(slot.createSignal()))
+			return false;
+
+		// remember this slot for future connections on the other side
+		addSlot(slot);
+
+		// connect the new slot to each registered receiver on the other side
+		typename PassThroughSlotBase::receivers_type::iterator receiver;
+		for (receiver = getTarget().getReceivers().begin(); receiver != getTarget().getReceivers().end(); receiver++)
+			slot.connect(*(*receiver));
 
 		return true;
 	}
@@ -36,7 +54,14 @@ public:
 	 *         true, if the callback and slot are type compatible and have been 
 	 *         disconnected.
 	 */
-	bool disconnect(SlotBase&) {
+	bool disconnect(SlotBase& slot) {
+
+		removeSlot(slot);
+
+		// disconnect this slot from each registered receiver on the other side
+		typename PassThroughSlotBase::receivers_type::iterator receiver;
+		for (receiver = getTarget().getReceivers().begin(); receiver != getTarget().getReceivers().end(); receiver++)
+			slot.disconnect(*(*receiver));
 
 		return true;
 	}
@@ -44,9 +69,10 @@ public:
 	/**
 	 * Set the other end of this pass-through callback.
 	 */
-	void forwardTo(PassThroughSlot<SignalType>& target) {
+	void forwardTo(PassThroughSlotBase& target) {
 
-		_target = &target;
+		setTarget(target);
+		target.setSource(*this);
 	}
 
 private:
@@ -64,9 +90,6 @@ private:
 
 		return Slot<SignalType>::referenceSignal;
 	}
-
-	// the other end of this pass-through tunnel
-	PassThroughSlot<SignalType>* _target;
 };
 
 } // namespace signals
