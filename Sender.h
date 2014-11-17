@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "SlotComparator.h"
+#include "Logging.h"
 
 namespace signals {
 

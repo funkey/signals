@@ -1,6 +1,8 @@
 #ifndef SIGNALS_SLOT_COMPARATOR_H__
 #define SIGNALS_SLOT_COMPARATOR_H__
 
+#include "SlotBase.h"
+
 namespace signals {
 
 struct SlotComparator {
