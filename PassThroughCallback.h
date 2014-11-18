@@ -1,6 +1,7 @@
 #ifndef SIGNALS_PASS_TROUGH_CALLBACK_H__
 #define SIGNALS_PASS_TROUGH_CALLBACK_H__
 
+#include "Slot.h"
 #include "CallbackBase.h"
 #include "PassThroughCallbackBase.h"
 #include "PassThroughSlotBase.h"
