@@ -1,6 +1,7 @@
 #ifndef SIGNALS_PASS_THROUGH_SLOT_H__
 #define SIGNALS_PASS_THROUGH_SLOT_H__
 
+#include "SignalTraits.h"
 #include "PassThroughSlotBase.h"
 #include "PassThroughCallbackBase.h"
 
@@ -16,7 +17,7 @@ public:
 	 */
 	const Signal& createSignal() const {
 
-		return Slot<SignalType>::referenceSignal;
+		return SignalTraits<SignalType>::Reference;
 	}
 
 	/**

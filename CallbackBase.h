@@ -11,7 +11,8 @@ class CallbackBase {
 
 public:
 
-	CallbackBase() :
+	CallbackBase(std::function<void(Signal&)> relayFunction) :
+		_relayFunction(relayFunction),
 		_isTransparent(false),
 		_precedence(0) {}
 
@@ -82,6 +83,16 @@ public:
 		return other.accepts(createSignal());
 	}
 
+	/**
+	 * Get the relay function, i.e., the most general form of the function 
+	 * provided by this callback. Calling this function with the signal (and 
+	 * derived signals) provided by this callback should be valid.
+	 */
+	const std::function<void(Signal&)>& relayFunction() const {
+
+		return _relayFunction;
+	}
+
 protected:
 
 	/**
@@ -97,6 +108,9 @@ protected:
 	virtual const Signal& createSignal() const = 0;
 
 private:
+
+	// the most general way to provide the callback
+	std::function<void(Signal&)> _relayFunction;
 
 	// indicates that this is a transparent callback
 	bool _isTransparent;

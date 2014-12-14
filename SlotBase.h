@@ -5,6 +5,7 @@ namespace signals {
 
 // forward declarations
 class Receiver;
+class CallbackBase;
 class Signal;
 
 class SlotBase {
@@ -19,9 +20,21 @@ public:
 	virtual bool connect(Receiver& receiver) = 0;
 
 	/**
+	 * Add the callback of a receiver to this slot.
+	 *
+	 * Precondition: The callback does accept the signal provided by this slot.
+	 */
+	virtual bool addCallback(CallbackBase& callback) = 0;
+
+	/**
 	 * Disconnect this slot from a receiver.
 	 */
 	virtual bool disconnect(Receiver& receiver) = 0;
+
+	/**
+	 * Remove a callback from this slot.
+	 */
+	virtual bool removeCallback(CallbackBase& callback) = 0;
 
 	/**
 	 * Comparison operator that sorts slots according to their specificity:

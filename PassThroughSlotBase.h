@@ -36,6 +36,18 @@ public:
 		_source = &source;
 	}
 
+	/**
+	 * Not implemented. Callbacks can not directly connect to a pass-through 
+	 * slot.
+	 */
+	bool addCallback(CallbackBase&) override { return false; }
+
+	/**
+	 * Not implemented. Callbacks can not directly connect to a pass-through 
+	 * slot.
+	 */
+	bool removeCallback(CallbackBase&) override { return false; }
+
 protected:
 
 	/**

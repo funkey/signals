@@ -8,6 +8,7 @@
 #include "CallbackInvoker.h"
 #include "CallbackTracking.h"
 #include "CastingPolicy.h"
+#include "SignalTraits.h"
 #include "Slot.h"
 
 namespace signals {
@@ -23,33 +24,28 @@ namespace signals {
  */
 template <
 	typename SignalType,
-	typename TrackingPolicy = NoTracking,
-	template <typename ToType> class CastingPolicy = StaticCast>
+	typename TrackingPolicy = NoTracking>
 class Callback :
 		public CallbackBase,
 		public TrackingPolicy,
-		public CastingPolicy<SignalType&>,
 		public boost::noncopyable /* prevents references to _callback to get invalidated */ {
 
 public:
-
-	typedef SignalType                         signal_type;
-	typedef boost::function<void(SignalType&)> callback_type;
 
 	/**
 	 * Create a new callback.
 	 *
 	 * @param callback
 	 *              Any expression that can be cast into a 
-	 *              boost::function<void(SignalType&)>.
+	 *              std::function<void(SignalType&)>.
 	 *
 	 * @param invocation
 	 *              Optional invocation type. Influences which callbacks are  
 	 *              connected to signals, if several callbacks are compatible.  
 	 *              See CallbackInvocation.
 	 */
-	Callback(callback_type callback, CallbackInvocation invocation = Exclusive) :
-		_callback(callback) {
+	Callback(std::function<void(SignalType&)> callback, CallbackInvocation invocation = Exclusive) :
+		CallbackBase([callback](Signal& signal){ callback(static_cast<SignalType&>(signal)); }) {
 
 		if (invocation == Transparent)
 			setTransparent();
@@ -69,26 +65,7 @@ public:
 		if (!accepts(reference))
 			return false;
 
-		/* Here, we cast whatever comes to Slot<SignalType>. This means,
-		 * that we every once in a while cast Slot<Dervied> to Slot<Base>
-		 * (note that the Slots themselves are not dervied from each other).
-		 *
-		 * What can go wrong?
-		 *
-		 * The only thing we do is to call connect(Callback<Base>), where
-		 * instead the object implements connect(Callback<Derived>). In
-		 * connect, we take the actual boost::signal and connect
-		 * Callback<Base>::operator()(Signal&) to it.
-		 *
-		 * Since all the Slot<SignalType>s are identical in memory (we know
-		 * this since we made them), the static casts are safe. We will talk
-		 * to the right object with the wrong name, but this doesn't matter,
-		 * since they all have a boost::signal of the same name -- and there
-		 * everything is save again.
-		 */
-		Slot<SignalType>& s = static_cast<Slot<SignalType>&>(slot);
-
-		s.addCallback(*this);
+		slot.addCallback(*this);
 
 		return true;
 	}
@@ -107,38 +84,9 @@ public:
 		if (!accepts(reference))
 			return false;
 
-		/* Here, we cast whatever comes to Slot<SignalType>. This means,
-		 * that we every once in a while cast Slot<Dervied> to Slot<Base>
-		 * (note that the Slots themselves are not dervied from each other).
-		 *
-		 * What can go wrong?
-		 *
-		 * The only thing we do is to call connect(Callback<Base>), where
-		 * instead the object implements connect(Callback<Derived>). In
-		 * connect, we take the actual boost::signal and connect
-		 * Callback<Base>::operator()(Signal&) to it.
-		 *
-		 * Since all the Slot<SignalType>s are identical in memory (we know
-		 * this since we made them), the static casts are safe. We will talk
-		 * to the right object with the wrong name, but this doesn't matter,
-		 * since they all have a boost::signal of the same name -- and there
-		 * everything is save again.
-		 */
-		Slot<SignalType>& s = static_cast<Slot<SignalType>&>(slot);
-
-		s.disconnect(*this);
+		slot.removeCallback(*this);
 
 		return true;
-	}
-
-	/**
-	 * Get an invoker for this callback. The invoker can be used as a function 
-	 * to send a signal to this callback.
-	 */
-	CallbackInvoker<SignalType> getInvoker() {
-
-		// delegate creation of the invoker to the tracking policy
-		return this->createInvoker(boost::ref(_callback));
 	}
 
 private:
@@ -154,10 +102,8 @@ private:
 
 	const Signal& createSignal() const {
 
-		return Slot<SignalType>::referenceSignal;
+		return SignalTraits<SignalType>::Reference;
 	}
-
-	callback_type _callback;
 };
 
 } // namespace signals

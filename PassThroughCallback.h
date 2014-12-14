@@ -2,6 +2,7 @@
 #define SIGNALS_PASS_TROUGH_CALLBACK_H__
 
 #include "Slot.h"
+#include "SignalTraits.h"
 #include "CallbackBase.h"
 #include "PassThroughCallbackBase.h"
 #include "PassThroughSlotBase.h"
@@ -89,7 +90,7 @@ private:
 
 	const Signal& createSignal() const {
 
-		return Slot<SignalType>::referenceSignal;
+		return SignalTraits<SignalType>::Reference;
 	}
 };
 

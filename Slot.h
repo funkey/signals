@@ -3,15 +3,16 @@
 
 #include <boost/thread.hpp>
 
-#include "CallbackInvoker.h"
 #include "Signal.h"
+#include "SignalTraits.h"
 #include "SlotBase.h"
 #include "Receiver.h"
+#include "CallbackInvoker.h"
 #include "Logging.h"
 
 namespace signals {
 
-template <typename SignalType>
+template <typename SignalType, typename CallbackInvokerType = CallbackInvoker<SignalType> >
 class Slot : public SlotBase {
 
 public:
@@ -47,7 +48,7 @@ public:
 	 */
 	const Signal& createSignal() const {
 
-		return referenceSignal;
+		return SignalTraits<SignalType>::Reference;
 	}
 
 	/**
@@ -93,14 +94,21 @@ public:
 
 	/**
 	 * Add a callback to this slot.
+	 *
+	 * Precondition: The callback does accept our signal.
 	 */
-	template <typename CallbackType>
-	bool addCallback(CallbackType& callback) {
+	bool addCallback(CallbackBase& callback) {
 
 		if (isConnected(callback))
 			return false;
 
-		addInvoker(callback.getInvoker());
+		typename CallbackInvokerType::CallbackBaseType* p = dynamic_cast<typename CallbackInvokerType::CallbackBaseType*>(&callback);
+
+		// not the type of callback we are interested in?
+		if (!p)
+			return false;
+
+		addInvoker(CallbackInvokerType(*p));
 
 		LOG_ALL(signalslog) << typeName(callback) << " connected to " << typeName(this) << std::endl;
 
@@ -110,13 +118,18 @@ public:
 	/**
 	 * Disconnect a callback from this slot.
 	 */
-	template <typename CallbackType>
-	bool disconnect(CallbackType& callback) {
+	bool removeCallback(CallbackBase& callback) {
 
 		if (!isConnected(callback))
 			return false;
 
-		removeInvoker(callback.getInvoker());
+		typename CallbackInvokerType::CallbackBaseType* p = dynamic_cast<typename CallbackInvokerType::CallbackBaseType*>(&callback);
+
+		// not the type of callback we are interested in?
+		if (!p)
+			return false;
+
+		removeInvoker(CallbackInvokerType(*p));
 
 		LOG_ALL(signalslog) << typeName(callback) << " disconnected from " << typeName(this) << std::endl;
 
@@ -131,12 +144,8 @@ public:
 		return _invokers.size();
 	}
 
-	// a reference signal for type comparison
-	static SignalType referenceSignal;
-
 private:
 
-	typedef CallbackInvoker<SignalType>      CallbackInvokerType;
 	typedef std::vector<CallbackInvokerType> CallbackInvokersType;
 
 	bool canSend(const Signal& signal) const {
@@ -147,7 +156,13 @@ private:
 	template <typename CallbackType>
 	bool isConnected(CallbackType& callback) {
 
-		return std::find(_invokers.begin(), _invokers.end(), callback.getInvoker()) != _invokers.end();
+		typename CallbackInvokerType::CallbackBaseType* p = dynamic_cast<typename CallbackInvokerType::CallbackBaseType*>(&callback);
+
+		// not the type of callback we are interested in?
+		if (!p)
+			return false;
+
+		return std::find(_invokers.begin(), _invokers.end(), CallbackInvokerType(*p)) != _invokers.end();
 	}
 
 	void addInvoker(const CallbackInvokerType& invoker) {
@@ -217,10 +232,6 @@ private:
 	// mutex to prevent concurrent access to the invoker list
 	boost::mutex _mutex;
 };
-
-// If you got an error here, that means most likely that you have a signal that
-// does not provide a default constructor.
-template<typename SignalType> SignalType Slot<SignalType>::referenceSignal;
 
 } // namespace signals
 

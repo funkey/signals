@@ -15,6 +15,7 @@ class PassThroughCallbackBase : public CallbackBase {
 public:
 
 	PassThroughCallbackBase() :
+		CallbackBase([](Signal&){}),
 		_target(0) {}
 
 	typedef std::set<SlotBase*> slots_type;

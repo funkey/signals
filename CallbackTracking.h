@@ -13,11 +13,11 @@ class NoTracking {
 
 public:
 
-	template <typename SignalType>
-	CallbackInvoker<SignalType> createInvoker(boost::reference_wrapper<boost::function<void(SignalType&)> > callback) {
+	//template <typename SignalType>
+	//CallbackInvoker<SignalType> createInvoker(boost::reference_wrapper<boost::function<void(SignalType&)> > callback) {
 
-		return CallbackInvoker<SignalType>(callback);
-	}
+		//return CallbackInvoker<SignalType>(callback);
+	//}
 };
 
 /**
@@ -32,23 +32,23 @@ class WeakTracking {
 
 public:
 
-	void track(boost::shared_ptr<HolderType> holder) const {
+	//void track(boost::shared_ptr<HolderType> holder) const {
 
-		_holder = holder;
-	}
+		//_holder = holder;
+	//}
 
-	template <typename SignalType>
-	CallbackInvoker<SignalType> createInvoker(boost::reference_wrapper<boost::function<void(SignalType&)> > callback) {
+	//template <typename SignalType>
+	//CallbackInvoker<SignalType> createInvoker(boost::reference_wrapper<boost::function<void(SignalType&)> > callback) {
 
-		CallbackInvoker<SignalType> invoker(callback);
-		invoker.setWeakTracking(_holder);
+		//CallbackInvoker<SignalType> invoker(callback);
+		//invoker.setWeakTracking(_holder);
 
-		return invoker;
-	}
+		//return invoker;
+	//}
 
 private:
 
-	mutable boost::weak_ptr<HolderType> _holder;
+	//mutable boost::weak_ptr<HolderType> _holder;
 };
 
 /**
@@ -62,23 +62,23 @@ class SharedTracking {
 
 public:
 
-	void track(boost::shared_ptr<HolderType> holder) const {
+	//void track(boost::shared_ptr<HolderType> holder) const {
 
-		_holder = holder;
-	}
+		//_holder = holder;
+	//}
 
-	template <typename SignalType>
-	CallbackInvoker<SignalType> createInvoker(boost::reference_wrapper<boost::function<void(SignalType&)> > callback) {
+	//template <typename SignalType>
+	//CallbackInvoker<SignalType> createInvoker(boost::reference_wrapper<boost::function<void(SignalType&)> > callback) {
 
-		CallbackInvoker<SignalType> invoker(callback);
-		invoker.setSharedTracking(_holder.lock());
+		//CallbackInvoker<SignalType> invoker(callback);
+		//invoker.setSharedTracking(_holder.lock());
 
-		return invoker;
-	}
+		//return invoker;
+	//}
 
 private:
 
-	mutable boost::weak_ptr<HolderType> _holder;
+	//mutable boost::weak_ptr<HolderType> _holder;
 };
 
 } // namespace signals

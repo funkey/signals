@@ -4,16 +4,21 @@
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include "Logging.h"
+#include "CallbackBase.h"
 
 namespace signals {
 
 /**
- * Functor to send signals of type SignalType to a callback.
+ * Generic functor to send signals of type SignalType to a callback. The 
+ * callback is stored as a std::function.
  */
 template <typename SignalType>
 class CallbackInvoker {
 
 public:
+
+	// accepts all callbacks
+	typedef CallbackBase CallbackBaseType;
 
 	/**
 	 * Lock to guard this callback invoker. Successful locking guarantees that 
@@ -55,11 +60,8 @@ public:
 		boost::shared_ptr<void> _weakObjectLock;
 	};
 
-	/**
-	 * Create a callback invoker from a boost::function.
-	 */
-	CallbackInvoker(boost::reference_wrapper<boost::function<void(SignalType&)> > callback) :
-		_callback(callback),
+	CallbackInvoker(const CallbackBase& callback) :
+		_callback(boost::ref(callback.relayFunction())),
 		_isWeakTracking(false),
 		_isSharedTracking(false) {}
 
@@ -110,14 +112,6 @@ public:
 	/**
 	 * Send a signal via this callback invoker.
 	 */
-	//void operator()(SignalType& signal) {
-
-		//_callback(signal);
-	//}
-
-	/**
-	 * Send a signal via this callback invoker.
-	 */
 	template <typename T>
 	void operator()(T& signal) {
 
@@ -136,7 +130,7 @@ public:
 private:
 
 	// the function that will be called by this invoker
-	boost::reference_wrapper<boost::function<void(SignalType&)> > _callback;
+	boost::reference_wrapper<const std::function<void(Signal&)> > _callback;
 
 	// weak pointer to an object that is tracked by this invoker
 	boost::weak_ptr<void> _weaklyTrackedObject;
