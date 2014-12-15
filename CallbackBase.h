@@ -93,6 +93,12 @@ public:
 		return _relayFunction;
 	}
 
+	/**
+	 * Create a reference signal for run-time type inference. This reference is
+	 * used to find compatible pairs of slots and callbacks.
+	 */
+	virtual const Signal& createSignal() const = 0;
+
 protected:
 
 	/**
@@ -100,12 +106,6 @@ protected:
 	 * callback accepts.
 	 */
 	virtual bool accepts(const Signal& signal) const = 0;
-
-	/**
-	 * Create a reference signal for run-time type inference. This reference is
-	 * used to find compatible pairs of slots and callbacks.
-	 */
-	virtual const Signal& createSignal() const = 0;
 
 private:
 

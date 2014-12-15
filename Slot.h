@@ -1,6 +1,7 @@
 #ifndef SIGNALS_SLOT_H__
 #define SIGNALS_SLOT_H__
 
+#include <utility>
 #include <boost/thread.hpp>
 
 #include "Signal.h"
@@ -165,14 +166,14 @@ private:
 		return std::find(_invokers.begin(), _invokers.end(), CallbackInvokerType(*p)) != _invokers.end();
 	}
 
-	void addInvoker(const CallbackInvokerType& invoker) {
+	void addInvoker(CallbackInvokerType&& invoker) {
 
-		_invokers.push_back(invoker);
+		_invokers.push_back(std::forward<CallbackInvokerType>(invoker));
 	}
 
 	void removeInvoker(const CallbackInvokerType& invoker) {
 
-		typename CallbackInvokersType::iterator i = std::find(_invokers.begin(), _invokers.end(), invoker);
+		auto i = std::find(_invokers.begin(), _invokers.end(), invoker);
 
 		if (i != _invokers.end())
 			_invokers.erase(i);
@@ -183,19 +184,19 @@ private:
 		bool foundStaleInvokers = false;
 
 		// for each callback invoker
-		for (typename CallbackInvokersType::iterator invoker = _invokers.begin(); invoker != _invokers.end(); invoker++) {
+		for (auto& invoker : _invokers) {
 
-			LOG_ALL(signalslog) << "processing callback invoker " << typeName(*invoker) << std::endl;
+			LOG_ALL(signalslog) << "processing callback invoker " << typeName(invoker) << std::endl;
 
 			// try to get the callback lock
-			typename CallbackInvokerType::Lock lock = invoker->lock();
+			typename CallbackInvokerType::Lock lock = invoker.lock();
 
 			// if failed, add invoker to list of stale invokers
 			if (!lock) {
 
-				LOG_ALL(signalslog) << "callback invoker " << typeName(*invoker) << " got stale" << std::endl;
+				LOG_ALL(signalslog) << "callback invoker " << typeName(invoker) << " got stale" << std::endl;
 
-				_staleInvokers.push_back(*invoker);
+				_staleInvokers.push_back(&invoker);
 				foundStaleInvokers = true;
 
 				continue;
@@ -203,7 +204,7 @@ private:
 			// otherwise, call
 			} else {
 
-				(*invoker)(signal);
+				invoker(signal);
 			}
 		}
 
@@ -211,12 +212,12 @@ private:
 			return;
 
 		// for each stale invoker
-		for (typename CallbackInvokersType::iterator invoker = _staleInvokers.begin(); invoker != _staleInvokers.end(); invoker++) {
+		for (auto* invoker : _staleInvokers) {
 
 			// remove it
 			removeInvoker(*invoker);
 
-			LOG_ALL(signalslog) << "removed stale invoker " << typeName(*invoker) << std::endl;
+			LOG_ALL(signalslog) << "removed stale invoker " << typeName(invoker) << std::endl;
 		}
 
 		// clear stale invokers
@@ -224,10 +225,10 @@ private:
 	}
 
 	// list of callback invokers
-	CallbackInvokersType _invokers;
+	std::vector<CallbackInvokerType> _invokers;
 
 	// list of callback invokers that failed to lock and should be removed
-	CallbackInvokersType _staleInvokers;
+	std::vector<CallbackInvokerType*> _staleInvokers;
 
 	// mutex to prevent concurrent access to the invoker list
 	boost::mutex _mutex;
