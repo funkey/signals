@@ -1,6 +1,8 @@
 #include "Slot.h"
 #include "Slots.h"
 #include "Callback.h"
+#include "VirtualCallback.h"
+#include "VirtualCallbackInvoker.h"
 #include "Sender.h"
 #include "Receiver.h"
 #include "Signal.h"
