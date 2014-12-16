@@ -16,8 +16,9 @@ namespace signals {
  * that defers to a virtual method provided by a class modelling the concept 
  * Handler:
  *
- *   class Handler {
+ *   class Handler : public HandlerBaseType {
  *   public:
+ *     typedef HandlerBase HandlerBaseType;
  *     virtual ~Handler() {}
  *     virtual void on(SignalType& signal) = 0;
  *   };
@@ -30,7 +31,7 @@ public:
 	/**
 	 * Create a new callback that defers to a virtual method
 	 *
-	 *   void on(SignalType&)
+	 *   void onSignal(SignalType&)
 	 *
 	 * of the given handler.
 	 *
@@ -39,7 +40,7 @@ public:
 	 *              SignalType.
 	 */
 	VirtualCallback(HandlerType* handler, CallbackInvocation invocation = Exclusive) :
-		VirtualCallbackBase<typename HandlerType::HandlerBaseType>([this](Signal& signal){ static_cast<HandlerType*>(this->handler())->on(static_cast<SignalType&>(signal)); }, handler),
+		VirtualCallbackBase<typename HandlerType::HandlerBaseType>([this](Signal& signal){ static_cast<HandlerType*>(this->handler())->onSignal(static_cast<SignalType&>(signal)); }, handler),
 		_handler(handler) {
 
 		if (invocation == Transparent)

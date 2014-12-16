@@ -15,7 +15,7 @@ namespace signals {
  *   class Handler {
  *   public:
  *     virtual ~Handler() {}
- *     virtual void on(SignalType& signal) = 0;
+ *     virtual void onSignal(SignalType& signal) = 0;
  *   };
  */
 template <typename SignalType, typename HandlerType>
@@ -111,7 +111,7 @@ public:
 	template <typename T>
 	bool operator()(T& signal) {
 
-		_handler->on(signal);
+		_handler->onSignal(signal);
 		return true;
 	}
 
@@ -140,7 +140,7 @@ private:
 
 	private:
 
-		void on(SignalType& signal) override {
+		void onSignal(SignalType& signal) override {
 
 			_fun(signal);
 		}
