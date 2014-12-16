@@ -109,9 +109,10 @@ public:
 	 * Send a signal via this callback invoker.
 	 */
 	template <typename T>
-	void operator()(T& signal) {
+	bool operator()(T& signal) {
 
 		_handler->on(signal);
+		return true;
 	}
 
 	/**

@@ -113,9 +113,16 @@ public:
 	 * Send a signal via this callback invoker.
 	 */
 	template <typename T>
-	void operator()(T& signal) {
+	bool operator()(T& signal) {
+
+		Lock l = lock();
+
+		if (!l)
+			return false;
 
 		boost::unwrap_ref(_callback)(signal);
+
+		return true;
 	}
 
 	/**

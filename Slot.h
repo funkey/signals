@@ -181,34 +181,12 @@ private:
 
 	void send(SignalType& signal) {
 
-		bool foundStaleInvokers = false;
-
 		// for each callback invoker
-		for (auto& invoker : _invokers) {
-
-			LOG_ALL(signalslog) << "processing callback invoker " << typeName(invoker) << std::endl;
-
-			// try to get the callback lock
-			typename CallbackInvokerType::Lock lock = invoker.lock();
-
-			// if failed, add invoker to list of stale invokers
-			if (!lock) {
-
-				LOG_ALL(signalslog) << "callback invoker " << typeName(invoker) << " got stale" << std::endl;
-
+		for (auto& invoker : _invokers)
+			if (!invoker(signal))
 				_staleInvokers.push_back(&invoker);
-				foundStaleInvokers = true;
 
-				continue;
-
-			// otherwise, call
-			} else {
-
-				invoker(signal);
-			}
-		}
-
-		if (!foundStaleInvokers)
+		if (!_staleInvokers.size() == 0)
 			return;
 
 		// for each stale invoker
