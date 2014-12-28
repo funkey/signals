@@ -27,19 +27,6 @@ public:
 	typedef typename HandlerType::HandlerBaseType HandlerBaseType;
 	typedef VirtualCallbackBase<HandlerBaseType>  CallbackBaseType;
 
-	/**
-	 * Dummy lock. VirtualCallbackInvoker can not be locked.
-	 */
-	class Lock {
-
-	public:
-
-		inline operator bool() {
-
-			return true;
-		}
-	};
-
 	VirtualCallbackInvoker() :
 		_handler(0),
 		_ownHandler(false) {}
@@ -94,15 +81,6 @@ public:
 
 		if (_ownHandler)
 			delete _handler;
-	}
-
-	/**
-	 * Lock this callback invoker. VirtualCallbackInvoker will always return a 
-	 * good lock.
-	 */
-	inline Lock lock() {
-
-		return Lock();
 	}
 
 	/**
