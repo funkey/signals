@@ -186,7 +186,7 @@ private:
 			if (!invoker(signal))
 				_staleInvokers.push_back(&invoker);
 
-		if (!_staleInvokers.size() == 0)
+		if (_staleInvokers.size() == 0)
 			return;
 
 		// for each stale invoker

@@ -71,12 +71,12 @@ protected:
 		return _receivers.erase(&receiver) == 1;
 	}
 
+	// the other end of this pass-through tunnel
+	PassThroughCallbackBase* _source;
+
 private:
 
 	receivers_type _receivers;
-
-	// the other end of this pass-through tunnel
-	PassThroughCallbackBase* _source;
 };
 
 } // namespace signals
