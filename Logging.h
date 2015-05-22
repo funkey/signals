@@ -2,6 +2,7 @@
 #define SIGNALS_LOGGING_H__
 
 #include <util/Logger.h>
+#define SIGNALS_LOG_ALL if (false) LOG_ALL
 
 namespace signals {
 

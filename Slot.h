@@ -70,7 +70,7 @@ public:
 
 		SignalType signal;
 
-		LOG_ALL(signalslog) << typeName(this) << " sending signal " << typeName(signal) << std::endl;
+		SIGNALS_LOG_ALL(signalslog) << typeName(this) << " sending signal " << typeName(signal) << std::endl;
 
 		send(signal);
 	}
@@ -82,7 +82,7 @@ public:
 	 */
 	void operator()(SignalType& signal) {
 
-		LOG_ALL(signalslog) << typeName(this) << " sending signal " << typeName(signal) << std::endl;
+		SIGNALS_LOG_ALL(signalslog) << typeName(this) << " sending signal " << typeName(signal) << std::endl;
 
 		send(signal);
 	}
@@ -106,7 +106,7 @@ public:
 
 		addInvoker(callback.getInvoker());
 
-		LOG_ALL(signalslog) << typeName(callback) << " connected to " << typeName(this) << std::endl;
+		SIGNALS_LOG_ALL(signalslog) << typeName(callback) << " connected to " << typeName(this) << std::endl;
 
 		return true;
 	}
@@ -122,7 +122,7 @@ public:
 
 		removeInvoker(callback.getInvoker());
 
-		LOG_ALL(signalslog) << typeName(callback) << " disconnected from " << typeName(this) << std::endl;
+		SIGNALS_LOG_ALL(signalslog) << typeName(callback) << " disconnected from " << typeName(this) << std::endl;
 
 		return true;
 	}
@@ -166,7 +166,7 @@ private:
 		// for each callback invoker
 		for (typename CallbackInvokersType::iterator invoker = _invokers.begin(); invoker != _invokers.end(); invoker++) {
 
-			LOG_ALL(signalslog) << "processing callback invoker " << typeName(*invoker) << std::endl;
+			SIGNALS_LOG_ALL(signalslog) << "processing callback invoker " << typeName(*invoker) << std::endl;
 
 			// try to get the callback lock
 			typename CallbackInvokerType::Lock lock = invoker->lock();
@@ -174,7 +174,7 @@ private:
 			// if failed, add invoker to list of stale invokers
 			if (!lock) {
 
-				LOG_ALL(signalslog) << "callback invoker " << typeName(*invoker) << " got stale" << std::endl;
+				SIGNALS_LOG_ALL(signalslog) << "callback invoker " << typeName(*invoker) << " got stale" << std::endl;
 
 				_staleInvokers.push_back(*invoker);
 				foundStaleInvokers = true;
@@ -197,7 +197,7 @@ private:
 			// remove it
 			removeInvoker(*invoker);
 
-			LOG_ALL(signalslog) << "removed stale invoker " << typeName(*invoker) << std::endl;
+			SIGNALS_LOG_ALL(signalslog) << "removed stale invoker " << typeName(*invoker) << std::endl;
 		}
 
 		// clear stale invokers

@@ -24,7 +24,7 @@ public:
 
 	void connect(Receiver& receiver) {
 
-		LOG_ALL(signalslog) << "sender trying to connect to receiver" << std::endl;
+		SIGNALS_LOG_ALL(signalslog) << "sender trying to connect to receiver" << std::endl;
 
 		// for every slot we provide
 		for (slots_type::iterator slot = _slots.begin();
@@ -54,7 +54,7 @@ public:
 
 	void disconnect(Receiver& receiver) {
 
-		LOG_ALL(signalslog) << "sender disconnecting from receiver" << std::endl;
+		SIGNALS_LOG_ALL(signalslog) << "sender disconnecting from receiver" << std::endl;
 
 		// for every slot we provide
 		for (slots_type::iterator slot = _slots.begin();

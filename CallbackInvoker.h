@@ -29,7 +29,7 @@ public:
 			_isGood(isGood),
 			_isWeakTracking(false) {
 
-			LOG_ALL(signalslog) << "created an always " << (isGood ? "good" : "bad") << " lock" << std::endl;
+			SIGNALS_LOG_ALL(signalslog) << "created an always " << (isGood ? "good" : "bad") << " lock" << std::endl;
 		}
 
 		Lock(boost::weak_ptr<void> weakTrackedObject) :
@@ -98,7 +98,7 @@ public:
 	 */
 	Lock lock() {
 
-		LOG_ALL(signalslog) << "create lock, weak tracking = " << _isWeakTracking << ", shared tracking = " << _isSharedTracking << ", shared object = " << _sharedTrackedObject << std::endl;
+		SIGNALS_LOG_ALL(signalslog) << "create lock, weak tracking = " << _isWeakTracking << ", shared tracking = " << _isSharedTracking << ", shared object = " << _sharedTrackedObject << std::endl;
 
 		if (_isWeakTracking)
 			return Lock(_weaklyTrackedObject);
